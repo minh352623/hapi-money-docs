@@ -11,30 +11,9 @@ interface FaqItem {
 const faqItems: FaqItem[] = [
   {
     id: 1,
-    topic: "Vấn đề chung",
-    question: "Những thông tin nào cần đảm bảo hiển thị cho người dùng TRƯỚC khi đổi quà?",
-    answer: "Trước khi đổi quà, những thông tin sau cần được hiển thị cho người dùng đọc và hiểu, tránh khiếu nại trong quá trình sử dụng quà:\n- Tên quà tặng + giá trị quà\n- Điều kiện sử dụng\n- Địa chỉ áp dụng (nếu có)"
-  },
-  {
-    id: 2,
-    question: "Những thông tin nào cần đảm bảo hiển thị cho người dùng SAU khi đổi quà xong?",
-    answer: "Sau khi đổi quà, những thông tin sau cần hiển thị cho người dùng, tránh khiếu nại và đảm bảo trải nghiệm của người dùng:\n- Logo UrBox\n- Tên quà tặng + giá trị + Hình ảnh quà\n- Textcode sử dụng + Hình ảnh code (nếu có)\n- Điều kiện sử dụng\n- Địa chỉ áp dụng (nếu có)\n- PIN/Serial (nếu có)\n- Hạn sử dụng của code quà"
-  },
-  {
-    id: 3,
-    question: "Tôi có thể tự thiết kế hình ảnh quà tặng thay vì lấy từ UrBox không?",
-    answer: "UrBox khuyến nghị đối tác sử dụng hình ảnh quà của UrBox. Do 1 số merchant hiện đang cung cấp code cho UrBox có quy định chặt chẽ về hình ảnh quà tặng."
-  },
-  {
-    id: 4,
     topic: "Kết nối API",
-    question: "Tần suất request API tới UrBox như thế nào để đảm bảo performance hai bên?",
-    answer: "- Với API lấy danh sách quà: tần suất 1 lần / ngày. Do thông tin quà không thay đổi quá nhiều.\n- Với API đổi quà: 80 request/phút"
-  },
-  {
-    id: 5,
-    question: "API Lấy danh sách quà tặng từ kho quà UrBox có hạn chế item trả về?",
-    answer: "Có. API lấy danh sách quà sẽ giới hạn 500 quà trong response. Nếu đối tác chạy nhiều hơn 500 quà, khi call API gift/list cần thêm filter (danh mục, brand,...) hoặc phân trang."
+    question: "Tần suất request API tới Hapi Money như thế nào để đảm bảo performance hai bên?",
+    answer: "- Với API check status transaction: 200 request/giây\n- Với API deposit: 200 request/giây\n- Với API withdrawn: 200 request/giây\n- Với API interest/claim: 200 request/giây"
   }
 ];
 

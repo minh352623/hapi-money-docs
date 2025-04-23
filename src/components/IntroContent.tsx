@@ -59,7 +59,7 @@ export function IntroContent() {
         <section className="mb-8">
           <h2 className="mb-4 text-2xl font-semibold text-white">Mô tả các bước xử lý</h2>
           <img 
-            src="/UrBox-API-Loyalty-Page-3.jpg"
+            src="/hapi.png"
             alt="Flow diagram"
             className="w-full rounded-lg border border-zinc-700"
           />

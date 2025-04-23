@@ -28,7 +28,7 @@ export function SecurityContent() {
         <ul className="list-disc pl-6 space-y-2 text-zinc-300 mb-4">
           <li>Dữ liệu đầu vào bao gồm Private key & data.</li>
           <li>
-            Thuật toán: ED25519.
+            Thuật toán: ED25519, AES-GCM.
             
           </li>
           <li>
@@ -39,7 +39,7 @@ export function SecurityContent() {
         
         <CopyBlock
           language="json"
-          text={`data = "Connection key do URBox cung cấp"`}
+          text={`data = "Provider key do URBox cung cấp"`}
         />
       
       </section>
@@ -50,112 +50,116 @@ export function SecurityContent() {
         <h3 className="text-lg font-medium mt-6 mb-4">Golang</h3>
         <CopyBlock
           language="go"
-          text={`func (a *T) EncryptAndSignEd25519V2(msg []byte, senderPriv interface{}) (string, error) {
-    // Handle private key - can be string or ed25519.PrivateKey
-    var privKey ed25519.PrivateKey
-    switch p := senderPriv.(type) {
-    case string:
-        decoded, err := base64.StdEncoding.DecodeString(p)
-        if err != nil {
-            return "", fmt.Errorf("invalid private key format: %w", err)
-        }
-        privKey = decoded
-    case ed25519.PrivateKey:
-        privKey = p
-    case []byte:
-        privKey = ed25519.PrivateKey(p)
-    default:
-        return "", fmt.Errorf("private key must be string, []byte, or ed25519.PrivateKey")
-    }
+          text={`func (a *SecurityService) EncryptAndSignEd25519(msg []byte, senderPriv interface{}, recipientAESKey interface{}) (string, error) {
+	// If no AES key provided, use the one from struct
+	if recipientAESKey == nil && a.AESKey != "" {
+		recipientAESKey = a.AESKey
+	}
 
-    // Rest of the encryption logic...
-    timestamp := fmt.Sprintf("%d", time.Now().Unix())
-    msgWithTimestamp := append([]byte(timestamp+"|"), msg...)
+	// If no private key provided, use the one from struct
+	if senderPriv == nil && a.PrivKey != "" {
+		senderPriv = a.PrivKey
+	}
 
-    signature := a.SignMessageEd25519(msgWithTimestamp, privKey)
-    msgWithSignature := append(msgWithTimestamp, []byte("|"+signature)...)
+	// Handle AES key - can be string or []byte
+	var aesKey []byte
+	switch k := recipientAESKey.(type) {
+	case string:
+		decoded, err := base64.StdEncoding.DecodeString(k)
+		if err != nil {
+			return "", fmt.Errorf("invalid AES key format: %w", err)
+		}
+		aesKey = decoded
+	case []byte:
+		aesKey = k
+	default:
+		return "", fmt.Errorf("AES key must be string or []byte")
+	}
 
-    return base64.StdEncoding.EncodeToString(msgWithSignature), nil
-}`}
+	// Handle private key - can be string or ed25519.PrivateKey
+	var privKey ed25519.PrivateKey
+	switch p := senderPriv.(type) {
+	case string:
+		decoded, err := base64.StdEncoding.DecodeString(p)
+		if err != nil {
+			return "", fmt.Errorf("invalid private key format: %w", err)
+		}
+		privKey = decoded
+	case ed25519.PrivateKey:
+		privKey = p
+	case []byte:
+		privKey = ed25519.PrivateKey(p)
+	default:
+		return "", fmt.Errorf("private key must be string, []byte, or ed25519.PrivateKey")
+	}
+
+	// Rest of the encryption logic...
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	msgWithTimestamp := append([]byte(timestamp+"|"), msg...)
+
+	signature := a.SignMessageEd25519(msgWithTimestamp, privKey)
+	msgWithSignature := append(msgWithTimestamp, []byte("|"+signature)...)
+
+	encryptedMsg, err := a.EncryptAESGCM(msgWithSignature, aesKey)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(encryptedMsg), nil
+}
+func (a *SecurityService) EncryptAESGCM(msg []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, aesGCM.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	ciphertext := aesGCM.Seal(nil, nonce, msg, nil)
+	return append(nonce, ciphertext...), nil
+}
+`}
           showLineNumbers={true}
           theme={dracula}
           codeBlock
         />
        
-
-         <h3 className="text-lg font-medium mb-4">C#</h3> 
-        <CopyBlock
-          language="csharp"
-          text={`public class SecurityService
-{
-    public static string EncryptAndSignEd25519V2(string msg, byte[] senderPriv)
-    {
-        // If no private key provided, use the one from the config
-        if (senderPriv == null)
-        {
-            throw new ArgumentNullException("Private key cannot be null");
-        }
-
-        // Create timestamp and append it to the message
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var msgWithTimestamp = timestamp + "|" + msg;
-
-        // Convert the message to bytes
-        byte[] msgBytes = Encoding.UTF8.GetBytes(msgWithTimestamp);
-
-        // Sign the message using ED25519
-        var signedMessage = Ed25519.Sign(msgBytes, senderPriv);
-
-        // Combine the original message and signature
-        byte[] msgWithSignature = new byte[msgBytes.Length + signedMessage.Length + 1];
-        msgBytes.CopyTo(msgWithSignature, 0);
-        msgWithSignature[msgBytes.Length] = (byte)'|';
-        signedMessage.CopyTo(msgWithSignature, msgBytes.Length + 1);
-
-        // Return the base64 encoded result
-        return Convert.ToBase64String(msgWithSignature);
-    }
-}`}
-      showLineNumbers={true}
-          theme={dracula}
-          codeBlock
-        />
-
-        <h3 className="text-lg font-medium mb-4">Javascript</h3>
+        <h3 className="text-lg font-medium my-4">Javascript</h3>
         <CopyBlock
           language="javascript"
-          text={`const nacl = require('tweetnacl');
-const base64 = require('base64-js');
-const crypto = require('crypto');
+          text={`function encryptAndSignEd25519(
+  msg: string,
+  senderPriv?: string,
+  recipientAESKey?: string,
+): string {
+  const aesKey = resolveKey(recipientAESKey, AESKey);
+  const privKey = resolveKey(senderPriv, PrivKey);
 
-function encryptAndSignEd25519V2(msg, senderPriv) {
-  // If no private key provided, use the one from the config
-  if (!senderPriv && process.env.PRIVATE_KEY) {
-    senderPriv = process.env.PRIVATE_KEY;
-  }
-
-  // Convert the private key (if string) to byte array
-  let privKey;
-  if (typeof senderPriv === 'string') {
-    privKey = Buffer.from(senderPriv, 'base64');
-  } else if (senderPriv instanceof Uint8Array) {
-    privKey = senderPriv;
-  } else {
-    throw new Error('Private key must be string or Uint8Array');
-  }
-
-  // Create timestamp
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const msgWithTimestamp = Buffer.concat([Buffer.from(timestamp + '|'), Buffer.from(msg)]);
+  const msgWithTimestamp = "timestamp|msg";
 
-  // Sign the message using Ed25519
-  const signature = nacl.sign.detached(msgWithTimestamp, privKey);
+  const signature = signMessageEd25519(msgWithTimestamp, privKey);
+  const finalMessage = "msgWithTimestamp}|signature";
 
-  // Combine the message and signature
-  const msgWithSignature = Buffer.concat([msgWithTimestamp, Buffer.from('|'), signature]);
+  return encryptAESGCM(finalMessage, aesKey);
+}
+function encryptAESGCM(msg: string, keyBase64: string): string {
+  const key = Buffer.from(keyBase64, 'base64');
+  const iv = crypto.randomBytes(12); // 12-byte nonce for AES-GCM
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
 
-  // Return base64 encoded result
-  return base64.fromByteArray(msgWithSignature);
+  const encrypted = Buffer.concat([cipher.update(msg, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  const result = Buffer.concat([iv, encrypted, tag]);
+
+  return result.toString('base64');
 }`}
             showLineNumbers={true}
           theme={dracula}
